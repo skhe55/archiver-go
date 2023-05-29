@@ -1,22 +1,11 @@
 package services
 
 import (
-	"fmt"
-	"strconv"
 	"strings"
 	"unicode"
-	"unicode/utf8"
 )
 
-type BinaryChunks []BinaryChunk
-
-type HexChunks []HexChunk
-
-type BinaryChunk string
-
-type HexChunk string
-
-var encodingTable = map[rune]string{
+var encodingTable = EncodingTable{
 	' ': "11",
 	't': "1001",
 	'n': "10000",
@@ -47,101 +36,23 @@ var encodingTable = map[rune]string{
 	'z': "000000000000",
 }
 
-const chunkSize = 8
-
 func Encode(str string) string {
-	str = prepareText(str)
+	str = prepareBeforeCompressText(str)
 
 	chunks := splitByChunks(encodeBinary(str), chunkSize)
 
 	return chunks.ToHex().ToString()
 }
 
-func (bChunks BinaryChunks) ToHex() HexChunks {
-	res := make(HexChunks, 0, len(bChunks))
+func Decode(encodedString string) string {
+	bString := NewHexChunks(encodedString).ToBinary().Join()
 
-	for _, chunk := range bChunks {
-		hexChunk := chunk.ToHex()
+	dTree := getEncodingTable().DecodingTree()
 
-		res = append(res, hexChunk)
-	}
-
-	return res
+	return prepareBeforeUncompressText(dTree.Decode(bString))
 }
 
-func (bChunk BinaryChunk) ToHex() HexChunk {
-	num, err := strconv.ParseUint(string(bChunk), 2, chunkSize)
-	if err != nil {
-		panic("can't parse binary chunk" + err.Error())
-	}
-
-	res := strings.ToUpper(fmt.Sprintf("%x", num))
-
-	if len(res) == 1 {
-		res = "0" + res
-	}
-
-	return HexChunk(res)
-}
-
-func (hChunks HexChunks) ToString() string {
-	const sep = " "
-
-	switch len(hChunks) {
-	case 0:
-		return ""
-	case 1:
-		return string(hChunks[0])
-	}
-
-	var buf strings.Builder
-
-	buf.WriteString(string(hChunks[0]))
-
-	for _, hChunk := range hChunks[1:] {
-		buf.WriteString(sep)
-		buf.WriteString(string(hChunk))
-	}
-
-	return buf.String()
-}
-
-// splitByChunks splits binary string by chunks with given size,
-// i.g: '1001100110011001' -> '10011001 10011001'
-func splitByChunks(bStr string, chunkSize int) BinaryChunks {
-	strLen := utf8.RuneCountInString(bStr)
-
-	chunksCount := strLen / chunkSize
-
-	if strLen%chunkSize != 0 {
-		chunksCount++
-	}
-
-	res := make(BinaryChunks, 0, chunksCount)
-
-	var buf strings.Builder
-
-	for i, char := range bStr {
-		buf.WriteString(string(char))
-
-		if (i+1)%chunkSize == 0 {
-			res = append(res, BinaryChunk(buf.String()))
-			buf.Reset()
-		}
-	}
-
-	if buf.Len() != 0 {
-		lastChunk := buf.String()
-
-		lastChunk += strings.Repeat("0", chunkSize-len(lastChunk))
-
-		res = append(res, BinaryChunk(lastChunk))
-	}
-
-	return res
-}
-
-func prepareText(str string) string {
+func prepareBeforeCompressText(str string) string {
 	var buf strings.Builder
 
 	for _, char := range str {
@@ -150,6 +61,21 @@ func prepareText(str string) string {
 			buf.WriteRune(unicode.ToLower(char))
 		} else {
 			buf.WriteRune(char)
+		}
+	}
+
+	return buf.String()
+}
+
+func prepareBeforeUncompressText(str string) string {
+	var buf strings.Builder
+
+	for i := 0; i < len(str); i++ {
+		if str[i] == '!' {
+			buf.WriteRune(unicode.ToUpper(rune(str[i+1])))
+			i++
+		} else {
+			buf.WriteByte(str[i])
 		}
 	}
 
@@ -179,6 +105,6 @@ func bin(char rune) string {
 	return res
 }
 
-func getEncodingTable() map[rune]string {
+func getEncodingTable() EncodingTable {
 	return encodingTable
 }

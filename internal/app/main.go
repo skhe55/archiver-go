@@ -1,17 +1,7 @@
 package app
 
-import (
-	"log"
+import "github.com/skhe55/archiver-go/internal/command"
 
-	"github.com/spf13/cobra"
-)
-
-var cmd = &cobra.Command{
-	Short: "Archiver",
-}
-
-func Execute() {
-	if err := cmd.Execute(); err != nil {
-		log.Fatal(err)
-	}
+func Init() {
+	command.Execute()
 }
