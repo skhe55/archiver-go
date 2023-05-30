@@ -1,4 +1,4 @@
-package services
+package vlc
 
 import (
 	"strings"
@@ -36,16 +36,22 @@ var encodingTable = EncodingTable{
 	'z': "000000000000",
 }
 
-func Encode(str string) string {
+type EncoderDecoder struct{}
+
+func New() EncoderDecoder {
+	return EncoderDecoder{}
+}
+
+func (_ EncoderDecoder) Encode(str string) []byte {
 	str = prepareBeforeCompressText(str)
 
 	chunks := splitByChunks(encodeBinary(str), chunkSize)
 
-	return chunks.ToHex().ToString()
+	return chunks.Bytes()
 }
 
-func Decode(encodedString string) string {
-	bString := NewHexChunks(encodedString).ToBinary().Join()
+func (_ EncoderDecoder) Decode(encodedData []byte) string {
+	bString := NewBinChunks(encodedData).Join()
 
 	dTree := getEncodingTable().DecodingTree()
 

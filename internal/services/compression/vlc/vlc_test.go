@@ -1,6 +1,7 @@
-package services
+package vlc
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -89,18 +90,19 @@ func Test_Encode(t *testing.T) {
 	tests := []struct {
 		name     string
 		str      string
-		expected string
+		expected []byte
 	}{
 		{
 			name:     "test #1",
 			str:      "Mty test strinG",
-			expected: "20 39 03 CD 59 D6 50 98 10 10",
+			expected: []byte{32, 57, 3, 205, 89, 214, 80, 152, 16, 16},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if r := Encode(tt.str); r != tt.expected {
+			encoder := New()
+			if r := encoder.Encode(tt.str); !reflect.DeepEqual(tt.expected, r) {
 				t.Errorf("Encode() = %v, expected %v", r, tt.expected)
 			}
 		})
@@ -130,7 +132,7 @@ func Test_prepareBeforeUncompressText(t *testing.T) {
 
 func TestDecode(t *testing.T) {
 	type args struct {
-		encodedString string
+		encodedData []byte
 	}
 	tests := []struct {
 		name string
@@ -140,14 +142,15 @@ func TestDecode(t *testing.T) {
 		{
 			name: "test #1",
 			args: args{
-				"20 39 03 CD 59 D6 50 98 10 10",
+				[]byte{32, 57, 3, 205, 89, 214, 80, 152, 16, 16},
 			},
 			want: "Mty test strinG",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Decode(tt.args.encodedString); got != tt.want {
+			decoder := New()
+			if got := decoder.Decode(tt.args.encodedData); got != tt.want {
 				t.Errorf("Decode() = %v, want %v", got, tt.want)
 			}
 		})
